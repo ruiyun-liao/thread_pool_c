@@ -18,63 +18,62 @@ static int is_thread_alive(pthread_t tid)
 
 static void *threadpool_thread(void *threadpool) 
 {
-  threadpool_t *pool = (threadpool_t *)threadpool;
-  thread_task_t task;
+    threadpool_t *pool = (threadpool_t *)threadpool;
+    thread_task_t task;
 
-  while (1)
-  {
-     pthread_mutex_lock(&(pool->lock_pool));
+    while (1)
+    {
+        pthread_mutex_lock(&(pool->lock_pool));
 
-     while ((pool->queue_size == 0) && (!pool->wait_destory))
-     { 
-         printf("thread %d is waiting \n", (unsigned int)pthread_self());
-         pthread_cond_wait(&(pool->queue_not_empty), &(pool->lock_pool));
+        while ((pool->queue_size == 0) && (!pool->wait_destory))
+        { 
+            printf("thread %d is waiting \n", (unsigned int)pthread_self());
+            pthread_cond_wait(&(pool->queue_not_empty), &(pool->lock_pool));
 
-         if (pool->thread_num_wait_exit > 0)
-         {
-             pool->thread_num_wait_exit--;
-             if (pool->thread_num_alive > pool->thread_num_min)
-             {
-                 printf("thread %d exit\n", (unsigned int)pthread_self());
-                 pool->thread_num_alive--;
-                 pthread_mutex_unlock(&(pool->lock_pool));
-                 pthread_exit(NULL);
-             }
-         }
-     }
+            if (pool->thread_num_wait_exit > 0)
+            {
+                pool->thread_num_wait_exit--;
+                if (pool->thread_num_alive > pool->thread_num_min)
+                {
+                     printf("thread %d exit\n", (unsigned int)pthread_self());
+                     pool->thread_num_alive--;
+                     pthread_mutex_unlock(&(pool->lock_pool));
+                     pthread_exit(NULL);
+                }
+            }
+        }
 
-     if (pool->wait_destory) 
-     {
-         pthread_mutex_unlock(&(pool->lock_pool));
-         printf("thread %d exit\n", (unsigned int)pthread_self());
-         pthread_exit(NULL); 
-     }
+        if (pool->wait_destory) 
+        {
+            pthread_mutex_unlock(&(pool->lock_pool));
+            printf("thread %d exit\n", (unsigned int)pthread_self());
+            pthread_exit(NULL); 
+        }
 
-     task.function = pool->task_queue[pool->queue_front].function; 
-     task.arg = pool->task_queue[pool->queue_front].arg;
+        task.function = pool->task_queue[pool->queue_front].function; 
+        task.arg = pool->task_queue[pool->queue_front].arg;
 
-     pool->queue_front = (pool->queue_front + 1) % pool->queue_max_size; 
-     pool->queue_size--;
+        pool->queue_front = (pool->queue_front + 1) % pool->queue_max_size; 
+        pool->queue_size--;
 
-     pthread_cond_broadcast(&(pool->queue_not_full));
+        pthread_cond_broadcast(&(pool->queue_not_full));
 
-     pthread_mutex_unlock(&(pool->lock_pool));
+        pthread_mutex_unlock(&(pool->lock_pool));
 
-     printf("thread %d work\n", (unsigned int)pthread_self());
-     pthread_mutex_lock(&(pool->thread_counter));                
-     pool->thread_num_busy++;
-     pthread_mutex_unlock(&(pool->thread_counter));
+        printf("thread %d work\n", (unsigned int)pthread_self());
+        pthread_mutex_lock(&(pool->thread_counter));                
+        pool->thread_num_busy++;
+        pthread_mutex_unlock(&(pool->thread_counter));
 
-     (*(task.function))(task.arg);                                   
+        (*(task.function))(task.arg);                                   
 
- 
-     printf("thread %d end work\n", (unsigned int)pthread_self());
-     pthread_mutex_lock(&(pool->thread_counter));
-     pool->thread_num_busy--;
-     pthread_mutex_unlock(&(pool->thread_counter));
-  }
+        printf("thread %d end work\n", (unsigned int)pthread_self());
+        pthread_mutex_lock(&(pool->thread_counter));
+        pool->thread_num_busy--;
+        pthread_mutex_unlock(&(pool->thread_counter));
+    }
 
-  pthread_exit(NULL);
+    pthread_exit(NULL);
 }
 
 static void *admin_thread(void *threadpool)
@@ -96,7 +95,7 @@ static void *admin_thread(void *threadpool)
 
         printf("busy-%d    alive-%d\n", thread_num_busy, thread_num_alive);
 
-		int thread_num_free = thread_num_alive - thread_num_busy;
+        int thread_num_free = thread_num_alive - thread_num_busy;
         if (queue_size >= thread_num_free && thread_num_alive <= pool->thread_num_max)
         {
             pthread_mutex_lock(&(pool->lock_pool));
@@ -139,7 +138,7 @@ static void *admin_thread(void *threadpool)
 static int threadpool_free(threadpool_t *pool)
 {
     if (pool == NULL)
-      return -1;
+        return -1;
     if (pool->task_queue)
         free(pool->task_queue);
     if (pool->threads)
@@ -164,24 +163,24 @@ threadpool_t *threadpool_create(int thread_num_min, int thread_num_max, int queu
     threadpool_t *pool = NULL;
     do
     {
-    	pool = (threadpool_t *)malloc(sizeof(threadpool_t));
+        pool = (threadpool_t *)malloc(sizeof(threadpool_t));
         if (NULL == pool)
         {
             printf("malloc threadpool fail\n");
             break;    
         }
-		
-		pool->thread_num_min = thread_num_min;
-		pool->thread_num_max = thread_num_max;
-		pool->thread_num_busy = 0;
-		pool->thread_num_alive = thread_num_min;
-		pool->thread_num_wait_exit = 0;
-		pool->thread_num_operate = thread_num_operate;
-		pool->queue_front = 0;
-		pool->queue_rear = 0;
-		pool->queue_size = 0;
-		pool->queue_max_size = queue_max_size;
-		pool->wait_destory = 0;
+        
+        pool->thread_num_min = thread_num_min;
+        pool->thread_num_max = thread_num_max;
+        pool->thread_num_busy = 0;
+        pool->thread_num_alive = thread_num_min;
+        pool->thread_num_wait_exit = 0;
+        pool->thread_num_operate = thread_num_operate;
+        pool->queue_front = 0;
+        pool->queue_rear = 0;
+        pool->queue_size = 0;
+        pool->queue_max_size = queue_max_size;
+        pool->wait_destory = 0;
 
         pool->threads = (pthread_t *)malloc(sizeof(pthread_t) * thread_num_max);
         if(NULL == pool->threads)
@@ -199,23 +198,23 @@ threadpool_t *threadpool_create(int thread_num_min, int thread_num_max, int queu
         }
  
         if(0 > pthread_mutex_init(&(pool->lock_pool), NULL) ||  0 > pthread_mutex_init(&(pool->thread_counter), NULL))
-    	{
-			printf("malloc lock fail\n");
+        {
+            printf("malloc lock fail\n");
             break;
-    	}
+        }
                
-		if(0 > pthread_cond_init(&(pool->queue_not_empty), NULL) ||  0 > pthread_cond_init(&(pool->queue_not_full), NULL))
-		{
-			printf("malloc cond fail\n");
+        if(0 > pthread_cond_init(&(pool->queue_not_empty), NULL) ||  0 > pthread_cond_init(&(pool->queue_not_full), NULL))
+        {
+            printf("malloc cond fail\n");
             break;
-		}
-		
+        }
+        
         for (i = 0; i < thread_num_min; i++)
         {
             pthread_create(&(pool->threads[i]), NULL, threadpool_thread, (void *)pool);
             printf("init thread %d... \n", (unsigned int)pool->threads[i]);
         }
-		
+        
         pthread_create(&(pool->admin_thread), NULL, admin_thread, (void *)pool);
 
         return pool;
@@ -231,7 +230,7 @@ int threadpool_destroy(threadpool_t *pool)
     int i;
     if (pool == NULL)
     {
-      return -1;
+        return -1;
     }
     pool->wait_destory = 1;
 
@@ -239,12 +238,12 @@ int threadpool_destroy(threadpool_t *pool)
 
     for (i=0; i<pool->thread_num_alive; i++)
     {
-      pthread_cond_broadcast(&(pool->queue_not_empty));
+        pthread_cond_broadcast(&(pool->queue_not_empty));
     }
 
     for (i=0; i<pool->thread_num_alive; i++)
     {
-      pthread_join(pool->threads[i], NULL);
+        pthread_join(pool->threads[i], NULL);
     }
 
     threadpool_free(pool);
